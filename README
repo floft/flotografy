@@ -1,0 +1,9 @@
+A simple script to generate some tone-mapped images using pfstmo.
+
+Depends:
+	enblend-enfuse
+	imagemagick
+	perl-exiftool
+	pfstmo
+	pfstools
+	gimp-ufraw (provides ufraw-batch)

@@ -1,0 +1,31 @@
+#!/bin/bash
+#generate blog files...: for i in $(find -name *.png | grep -v theexr | grep -v fattalexr | cut -d'/' -f2); do cd $i; /scripts/hdr -e $(ls | grep NEF | head -n 1) *.png; cd ..; done
+
+ask_yn() {
+	while true; do
+		response=""
+		echo -n "y/n: $1 "
+		read response
+
+		if [ "$response" == "n" ] || [ "$response" == "y" ]; then
+			break
+		fi
+	done
+}
+
+echo "Found directories:"
+echo */ | tr ' ' '\n' | sed 's/^/    /g'
+ask_yn "Continue?"
+
+if [ "$response" == "y" ]; then
+	pwd="$(pwd)"
+	for i in */; do
+		echo "Starting: $i"
+		cd "$i"
+		flotografy -a -ed 2 -d files *.NEF
+		cd "$pwd"
+		echo -e "\n\n\n"
+	done
+else
+	echo "Exiting..."
+fi

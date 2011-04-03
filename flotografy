@@ -1,0 +1,292 @@
+#!/bin/bash
+
+#Public URL: http://dl.dropbox.com/u/71366/hdr-script.txt
+#Requirements: enblend-enfuse, imagemagick, perl-exiftool, pfstmo, pfstools, gimp-ufraw (providing ufraw-batch), and... probably more.
+#Bugs reports can be sent on: http://floft.net/contact
+
+rawtype="NEF"
+exiftool="/usr/bin/perlbin/vendor/exiftool"
+comment="An image from Floft.net"
+
+input=""
+output=""
+task=""
+
+#hdr
+size=""
+auto="0"
+dir=""
+align="false"
+exposures="0"
+extend="0"
+maxmem=""
+
+#exif
+original=""
+shrinkify=""
+
+while [ "$1" != "" ]; do
+	case $1 in
+		"--help" | "-h" )	echo "Usage: (one of the following)"
+					echo "	$0 [-a] [-ex \"-2 0 2\"] [-ed 2] [-s 800x600] [-u|--auto] [-m|--max-memory 512] -d tmpdir files"
+					echo "	$0 -e original_image input_file [--noround|-nr]"
+					echo ""
+					echo " Note: the \"-e{x,d}\" options only works with $rawtype files."
+					exit 0
+					;;
+
+		#create the hdr
+		"--dir" | "-d" )	shift
+					task="hdr"
+					dir="$1"
+					;;
+		"--align" | "-a" )	align="true"
+					;;
+		"--exposures" | "-ex")	shift
+					exposures="$1"
+					;;
+		"--extend" | "-ed")	shift
+					extend="$1"
+					;;
+		#copy the exif data
+		"--exif" | "-e")	shift
+					task="exif"
+					original="$1"
+					;;
+		"--noround" | "-nr")	shrinkify="1"
+					;;
+		#other options
+		"--size" | "-s")	shift
+					size="$1"
+					;;
+		"--auto" | "-u")	auto="1"
+					;;
+		"--max-memory"|"-m")	shift
+					maxmem="-m $1"
+					;;
+		#the input files
+		*)
+					input="$input $1"
+					;;
+	esac
+	shift
+done
+
+if [ "$task" == "hdr" ]; then
+	if [ "$dir" == "" ]; then
+		echo "No directory specified!"
+		exit 1
+	elif  [ -e "$dir" ]; then
+		echo -n "Directory already exists! Add/overwrite files in directory? (y/n) "
+		read response
+		echo ""
+
+		if [ "$response" != "y" ]; then
+			exit 1
+		fi
+	fi
+
+	if [ "$input" == "" ]; then
+		echo "No files specified!"
+		exit 1
+	fi
+
+	starty() { echo "$1"; }
+	endy() { echo ""; }
+
+	startt=$(date +%s)
+	
+	#figure out what type of input files were given
+	type=""
+	for i in $input; do
+		newtype=${i//*\./}
+		if [ "$type" != "" ] && [ "$type" != "$newtype" ]; then
+			echo "Only one type of file can be given!"
+			exit 1
+		else
+			type="$newtype"
+		fi
+	done
+
+	function createimage() {
+		cioutput="$3"/${1//\.*/}_"$2"
+		ufraw-batch "$1" --wb=camera --exposure="$2" --clip=digital --base-curve=camera --restore=clip --out-depth=16 --overwrite --out-type=tif --wavelet-denoising-threshold=0 --output=$cioutput.raw.tif
+		if [ "$size" != "" ]; then
+			convert -resize $size $cioutput.raw.tif ${cioutput}_resize.raw.tif
+			mv ${cioutput}_resize.raw.tif $cioutput.raw.tif
+		fi
+	}
+
+	#get the input files
+	if [ "$type" == "$rawtype" ]; then
+		starty "Converting from $rawtype"
+		mkdir -p $dir
+		for i in $input; do for q in $exposures; do
+			createimage "$i" "$q" "$dir"
+		done; done
+		endy
+		
+		#get an extra two exposures, an extra bright and extra dark one
+		if [ "$extend" != "0" ]; then
+			starty "Finding brightest/darkest images"
+			#get bracketing value
+			bright_img=""
+			bright_val=""
+			dark_img=""
+			dark_val=""
+			
+			#find the brightest/darkest images
+			for i in $(ls $dir/*.raw.tif); do
+				brightness=$(identify -format "%[mean]" $i -quiet|sed -e "s/\..*//g")
+				
+				if [ "$dark_val" == "" ] || [ "$(echo "$dark_val"|sed -e "s/\..*//g")" -gt "$brightness" ]; then
+					dark_val="$brightness"
+					dark_img="$i"
+				fi
+				
+				if [ "$bright_val" == "" ] || [ "$(echo "$bright_val"|sed -e "s/\..*//g")" -lt "$brightness" ]; then
+					bright_val="$brightness"
+					bright_img="$i"
+				fi
+			done
+
+			if [ "$bright_img" != "" ] && [ "$dark_img" != "" ]; then
+				#create the extended images
+				starty "Creating extended bright image"
+				createimage "$(echo "$bright_img" | sed -e "s/\.raw\.tif//g" | sed -e "s/_.?*$/.$rawtype/g" | sed -e "s/^.*\///g" | xargs ls | head -n 1)" "$extend" "$dir"
+				starty "Creating extended dark image"
+				createimage "$(echo "$dark_img" | sed -e "s/\.raw\.tif//g" | sed -e "s/_.?*$/.$rawtype/g" | sed -e "s/^.*\///g" | xargs ls | head -n 1)" "$(echo "0-$extend"|bc)" "$dir"
+			else
+				#fallback if the brightness method failed
+				for i in $input; do
+					exbr="$($exiftool $i | grep -E "^Exposure Bracket" | awk '{print $5}')"
+					
+					if [ "$exbr" != "" ]; then
+						brackets="$exbr\n$brackets"
+					fi
+				done
+
+				bright_img="$(echo -e "$brackets" | sort -n | tail -n 1)"
+				dark_img="$(echo -e "$brackets" | sort -n | head -n 1)"
+
+				for i in $brackets; do
+					for q in $input; do
+						exbr="$($exiftool $q | grep -E "^Exposure Bracket" | awk '{print $5}')"
+
+	                                        if [ "$exbr" == "$bright_img" ]; then
+							starty "Creating extended (exposure bracket) bright image"
+							createimage "$q" "$extend" "$dir"
+						elif [ "$exbr" == "$dark_img" ]; then
+							starty "Creating extended (exposure bracket) dark image"
+							createimage "$q" "$(echo "0-$extend"|bc)" "$dir"
+                	                        fi
+					done
+				done
+			fi
+		endy
+		fi
+	else
+		starty "Getting the input files"
+		mkdir -p $dir
+		for i in $input; do
+			if [ "$size" != "" ]; then
+				convert -quality 100 -resize $size $i $dir/${i//\.*/}.raw.tif
+			else
+				convert -quality 100 $i $dir/${i//\.*/}.raw.tif
+			fi
+		done
+		endy 
+	fi
+	
+	#align/enfuse them
+	if [ "$align" == "true" ]; then
+		starty "Aligning images"
+		align_image_stack $dir/*.raw.tif -m -c 8 -vv -a $dir/aligned_
+		endy
+		starty "Enfusing image"
+		enfuse $dir/aligned_* -o $dir/theexr.png -v $maxmem
+		enfuse $dir/aligned_* -o $dir/theexr.exr -v $maxmem
+		endy
+	else
+		starty "Enfusing image"
+		enfuse $dir/*.raw.tif -o $dir/theexr.png -v $maxmem
+		enfuse $dir/*.raw.tif -o $dir/theexr.exr -v $maxmem
+		endy
+	fi
+
+	#create all the mantiuk, fattal, etc. images
+	starty "Creating half-sized images"
+	width=$(identify -format '%w' $dir/theexr.exr)
+	width_half=$(($width/2))
+	if [ "$size" != "" ]; then
+		cp $dir/theexr.exr $dir/theexr_half.exr
+	else
+		convert -resize $width_half $dir/theexr.exr $dir/theexr_half.exr
+	fi
+	endy
+
+	#starty "Creating Mantiuk - JPG"
+	#pfsin $dir/theexr_half.png | pfstmo_mantiuk06 -f 0.5 -s 1 | pfsout $dir/mantiukjpg_small.png
+	#convert -resize $width $dir/mantiukjpg_small.png $dir/mantiukjpg.png
+	#endy
+	
+	starty "Creating Fattal - EXR"
+	pfsin $dir/theexr_half.exr | pfstmo_fattal02 -a 1 -b 0.9 -s 0.8 -n 0.010 --verbose | pfsout $dir/fattalexr_small.png
+	convert -resize $width $dir/fattalexr_small.png $dir/fattalexr.png
+	endy
+
+	if [ "$auto" == "1" ]; then
+		convert -depth 8 $dir/theexr.png $dir/fattalexr.png -alpha on -compose dissolve -set "option:compose:args" 50,100 -gravity South -composite $dir/combined.png
+	        convert -depth 8 $dir/combined.png $dir/theexr.png -compose Overlay -composite $dir/auto.png
+	fi
+	
+	#trash all the temporary files
+	starty "Removing junk"
+	rm $dir/theexr_half.exr
+	rm $dir/fattalexr_small.png
+	if [ "$align" == "true" ]; then rm $dir/*.raw.tif; fi
+	if [ "$auto" == "1" ]; then rm $dir/combined.png; fi
+	endy
+
+	endt=$(date +%s)
+	totaltime=$(echo "scale=2;($endt-$startt)/60"|bc)
+
+	echo ""
+	echo "Took: $totaltime min"
+elif [ "$task" == "exif" ]; then
+	input=${input//\ /}
+	if [ -e "$input" ] && [ -e "$original" ]; then
+		pwd=$(pwd)
+		prefix="$(date +%Y%m%d)_${pwd//\/*\//}"
+		output1="$prefix.jpg"
+		output2=$prefix"_round.jpg"
+		echo "Output final: $output1"
+		echo "Output round: $output2"
+		rand="$RANDOM$RANDOM$RANDOM$RANDOM$RANDOM$RANDOM$$"
+		tmp="/tmp/tmpout_$rand.jpg"
+
+		convert -quality 98 $input $output1; convert -quality 85 -resize 150 $output1 $tmp; $exiftool -TagsFromFile $original -all:all -overwrite_original_in_place -author=$(whoami) -Orientation='Horizontal (normal)' -comment="$comment" "-ThumbnailImage<=$tmp" $output1
+
+	
+		if [ "$shrinkify" == "1" ]; then
+			echo ""
+			echo "Please use the /home/floft/www/images/shrinkify.sh script."
+		else
+			width=$(identify -format '%w' $output1)
+			height=$(identify -format '%h' $output1)
+			convert -resize 824 -quality 98 $output1 $tmp
+			twidth=$(identify -format '%w' $tmp)
+			theight=$(identify -format '%h' $tmp)
+			convert -quality 98 -size "$twidth"x"$theight"  xc:none -stroke none -draw "roundrectangle 15,15 $(echo "$twidth-7"|bc),$(echo "$theight-7"|bc) 50,50" $tmp -compose SrcIn -composite -compose over \( +clone -background black -shadow 100x6+4+4 \) +swap -background white -mosaic $tmp
+			convert -resize 412 -quality 92 $tmp $output2
+		fi
+
+		echo "<p><a href=\"/images/blog/$output1\"><img src=\"/images/blog/$output2\" alt=\"\" /></a></p>"
+
+		rm $tmp
+	else
+		echo "Error: $input or $original doesn't exist!"
+	fi
+else
+	echo "Nothing specified."
+fi
