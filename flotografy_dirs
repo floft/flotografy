@@ -1,5 +1,5 @@
 #!/bin/bash
-#generate blog files...: for i in $(find -name *.png | grep -v theexr | grep -v fattalexr | cut -d'/' -f2); do cd $i; /scripts/hdr -e $(ls | grep NEF | head -n 1) *.png; cd ..; done
+#generate blog files...: for i in $(find -name *.png | grep -v theexr | grep -v fattalexr | cut -d'/' -f2); do cd $i; flotografy -e $(ls | grep NEF | head -n 1) *.png; cd ..; done
 
 ask_yn() {
 	while true; do
