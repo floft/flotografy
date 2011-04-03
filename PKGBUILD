@@ -7,6 +7,7 @@ arch=('any')
 url="http://floft.net/wiki/Scripts/Flotografy"
 license=('GPL')
 depends=('enblend-enfuse' 'imagemagick' 'perl-exiftool' 'pfstmo' 'pfstools' 'gimp-ufraw')
+makedepends=('curl')
 
 build() {
   curl https://github.com/Floft/Flotografy/raw/master/$pkgname -so $srcdir/$pkgname
