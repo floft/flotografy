@@ -217,11 +217,10 @@ if [ "$task" == "hdr" ]; then
 	#create all the mantiuk, fattal, etc. images
 	starty "Creating half-sized images"
 	width=$(identify -format '%w' $dir/theexr.exr)
-	width_half=$(($width/2))
 	if [ "$size" != "" ]; then
 		cp $dir/theexr.exr $dir/theexr_half.exr
 	else
-		convert -resize $width_half $dir/theexr.exr $dir/theexr_half.exr
+		convert -resize '50%' $dir/theexr.exr $dir/theexr_half.exr
 	fi
 	endy
 
@@ -231,7 +230,8 @@ if [ "$task" == "hdr" ]; then
 	#endy
 	
 	starty "Creating Fattal - EXR"
-	pfsin $dir/theexr_half.exr | pfstmo_fattal02 -a 1 -b 0.9 -s 0.8 -n 0.010 --verbose | pfsout $dir/fattalexr_small.png
+	#pfsin $dir/theexr_half.exr | pfstmo_fattal02 -a 1 -b 0.9 -s 0.8 -n 0.010 --verbose | pfsout $dir/fattalexr_small.png
+	pfsin $dir/theexr_half.exr | pfstmo_fattal02 -a 1 -b 0.9 -s 0.8 -n 0.010 --verbose | pfsoutppm - | pnmtopng > $dir/fattalexr_small.png
 	convert -resize $width $dir/fattalexr_small.png $dir/fattalexr.png
 	endy
 
