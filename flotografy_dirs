@@ -1,6 +1,4 @@
 #!/bin/bash
-#generate blog files...: for i in $(find -name *.png | grep -v theexr | grep -v fattalexr | cut -d'/' -f2); do cd $i; flotografy -e $(ls | grep NEF | head -n 1) *.png; cd ..; done
-
 ask_yn() {
 	while true; do
 		response=""
@@ -12,22 +10,66 @@ ask_yn() {
 		fi
 	done
 }
+create() {
+	if [ -n "$1" ]; then
+		folders=""
+		for i; do
+			[ -d "$i" ] && folders="$i"$'\n'"$folders"
+		done
+	else
+		folders="*/"
+	fi
+	echo "Found directories:"
+	echo $folders | tr ' ' '\n' | sed 's/^/    /g'; echo
+	ask_yn "Continue?"
 
-echo "Found directories:"
-echo */ | tr ' ' '\n' | sed 's/^/    /g'
-ask_yn "Continue?"
+	if [ "$response" == "y" ]; then
+		pwd="$(pwd)"
+		for i in $folders; do
+			echo "Starting: $i"
+			cd "$i"
+			#align if there's more than one photo
+			[ "$(ls *.* | wc -l)" -gt "1" ] && a="-a" || a=""
+			flotografy $a -ed 2 -d files *.*
+			cd "$pwd"
+			echo -e "\n\n\n"
+		done
+	else
+		echo "Exiting..."
+	fi
+}
+exif() {
+	if [ -n "$1" ]; then
+		folders=""
+		for i; do
+			[ -d "$i" ] && folders="$i"$'\n'"$folders"
+		done
+	else
+		folders="$(find -name '*.png' | grep -e '\./.*/' | grep -v fattal | grep -v theexr | sed -r 's/\.\/(.*)\/.*$/\1/g' | sort -u)"
+	fi
+	echo "Found directories:"
+	echo "$folders" | sed 's/^/     /g'
+	ask_yn "Continue?"
 
-if [ "$response" == "y" ]; then
-	pwd="$(pwd)"
-	for i in */; do
-		echo "Starting: $i"
-		cd "$i"
-		#align if there's more than one photo
-		[ "$(ls *.* | wc -l)" -gt "1" ] && a="-a" || a=""
-		flotografy $a -ed 2 -d files *.*
-		cd "$pwd"
-		echo -e "\n\n\n"
-	done
-else
-	echo "Exiting..."
-fi
+	if [ "$response" == "y" ]; then
+		IFS=$'\n'
+		pwd="$(pwd)"
+		for i in $folders; do
+			cd "$i"
+			#flotografy -e $(ls | grep NEF | head -n 1) *.png
+			echo *.png
+			cd "$pwd"
+		done
+	else
+		echo "Exiting..."
+	fi
+}
+
+while [ -n "$1" ]; do
+	case "$1" in
+		"-c") shift; create $@;;
+		"-e") shift; exif $@;;
+		"-h") echo "Usage: flotografy_dirs [-c|-e [folders]]";;
+	esac
+	shift
+done
