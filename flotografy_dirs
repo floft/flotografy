@@ -56,8 +56,7 @@ exif() {
 		pwd="$(pwd)"
 		for i in $folders; do
 			cd "$i"
-			#flotografy -e $(ls | grep NEF | head -n 1) *.png
-			echo *.png
+			flotografy -e $(ls | grep NEF | head -n 1) *.png
 			cd "$pwd"
 		done
 	else
