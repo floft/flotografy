@@ -22,7 +22,9 @@ if [ "$response" == "y" ]; then
 	for i in */; do
 		echo "Starting: $i"
 		cd "$i"
-		flotografy -a -ed 2 -d files *.NEF
+		#align if there's more than one photo
+		[ "$(ls *.* | wc -l)" -gt "1" ] && a="-a" || a=""
+		flotografy $a -ed 2 -d files *.*
 		cd "$pwd"
 		echo -e "\n\n\n"
 	done
