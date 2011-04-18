@@ -5,7 +5,8 @@
 #Bugs reports can be sent on: http://floft.net/contact
 
 rawtype="NEF"
-exiftool="/usr/bin/perlbin/vendor/exiftool"
+#exiftool="/usr/bin/perlbin/vendor/exiftool"
+exiftool="/usr/bin/vendor_perl/exiftool"
 comment="An image from Floft.net"
 
 input=""
