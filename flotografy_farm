@@ -1,0 +1,143 @@
+#!/bin/bash
+wait_30() { #1 = pid to kill; 2 = > this many jobs; 3 (optional) = sec to wait
+	seconds=0
+	[ -n "$3" ] && sec="$3" || sec="30"
+	while (( $(jobs|wc -l) > $2 )); do
+		if ((seconds>$sec)); then
+			kill "$1" &>/dev/null
+			break
+		fi
+		sleep 1
+		((seconds++))
+		jobs &>/dev/null
+	done
+}
+render() {
+	#align if more than one photo
+	if [ "$(ls *.* | wc -l)" -gt "1" ]; then a="-a"; else a=""; fi
+	#max memory
+	[ -n "$MAX_MEM" ] && m="-m $MAXMEM" || m=""
+	#create hdr
+	flotografy $a -u -ed 2 -d files $m *.* &> return.txt
+
+	touch done.txt
+}
+server_close() {
+	echo "Exiting..."
+	kill "$pid" &>/dev/null
+	kill "$wait" &>/dev/null
+	rm "$tmp" &>/dev/null
+	exit 1
+}
+server() {
+	if ps -ef | grep -v grep | grep floftografy_farm &>/dev/null; then
+		echo "already running"
+		exit 1
+	fi
+	
+	[ ! -e "$DIR" ] && echo "Not found: $DIR" && exit 1
+	cd "$DIR" || exit 1
+	
+	#start listening
+	ncat -l -k --ssl --broker $PORT &>/dev/null &
+	pid=$!
+	trap server_close 1 2 3 6 9 14 15
+
+	IFS=$'\n'
+	while true; do
+		for i in $(ls -d */ 2>/dev/null); do
+			if [ -n "$i" ] && [ ! -e "$i/return.txt" ] && \
+				[ ! -e "$i/files" ] && [ ! -e "$i/sent.txt" ]; then
+				cd "$i"
+				rm Thumbs.db &>/dev/null
+
+				sleep 2
+				#see if node wants to render
+				response=""
+				echo "want: $i" | ncat -w 1 --send-only --ssl 127.0.0.1 "$PORT"
+				sleep 0.1
+				tmp="$(mktemp --suffix=_flotografy_server)"
+				while read -r line; do
+					if grep -E "^reply: " <<<"$line" &>/dev/null && grep "$i" <<< "$line" &>/dev/null; then
+						sed -r 's/^reply: (.) .*/\1/g'<<<"$line" > "$tmp"
+						break
+					fi
+				done < <(ncat -w 1 --ssl 127.0.0.1 "$PORT") &
+				wait_30 $! 1
+				#send or render
+				if [ "$(cat "$tmp")" == "0" ] && tar cvf take.tar *.* && echo "take: $i" | \
+				 ncat -w 1 --send-only --ssl 127.0.0.1 "$PORT"; then
+					rm "$tmp"
+					touch sent.txt
+				else
+					rm "$tmp"
+					render
+				fi
+
+				cd "$DIR"
+			fi
+		done
+		[ -n "$1" ] && sleep "$1" || sleep 60
+	done
+}
+node_listener() {
+	while read -r line; do
+		if grep -E "^want: " <<< "$line" &>/dev/null; then
+			sleep 0.3
+			folder="$(sed 's/^want: //g'<<<"$line")"
+			zenity --question --title Flotografy --text "Render $folder?" &>/dev/null &
+			wait $! && resp=0 || resp=1
+			echo "reply: $resp $folder" | ncat -w 2 --send-only --ssl "$1" "$PORT"
+		elif grep -E "^take: " <<< "$line" &>/dev/null; then
+			folder="$(sed 's/^take: //g'<<<"$line")"
+			folder="${folder//\//}"
+			[ -n "$folder" ] && mkdir "$2/$folder" && ssh e "cat \"$DIR/$folder/take.tar\"" > "$2/$folder/take.tar" && \
+				echo "$folder"
+		fi
+	done < <(ncat -w 2 --ssl "$1" "$PORT" 2>/dev/null)
+}
+node_close() {
+	echo "Exiting..."
+	rm -rf "$1"
+	exit 1
+}
+node() {
+	list=()
+	server="$1"
+	tmp="$(mktemp -d --suffix=_floftografy_node)"
+	trap "node_close \"$tmp\"" 1 2 3 6 9 14 15
+
+	cd "$tmp" || node_close "$tmp"
+	while read -r line; do
+		if [ -d "$line" ]; then
+			echo "$line"
+			cd "$line" && \
+			tar xf take.tar && \
+			rm take.tar && \
+			render && \
+			mv files/* ./ && \
+			tar cf take.tar *.* && \
+			cat take.tar | ssh e "cd \"$DIR/$line/\" && cat > send.tar && tar xf send.tar && rm send.tar take.tar" || \
+			echo "fail: $line" | ncat -w 1 --send-only --ssl "$server" "$PORT"
+			cd "$tmp"
+			rm -rf "$line"
+		fi
+		sleep 5
+	done < <(node_listener "$server" "$tmp")
+}
+check() {
+	[ -z "$DIR" ] && echo "Specify dir." && exit 1
+	[ -z "$PORT" ] && echo "Specify port." && exit 1
+}
+
+while [ -n "$1" ]; do
+	case "$1" in
+		"-m") shift; MAX_MEM="$1";;
+		"-p") shift; PORT="$1";;
+		"-d") shift; DIR="$1";;
+		"-s") shift; check; server "$1"; exit;;
+		"-n") shift; check; node "$1"; exit;;
+		"-h") echo "Usage: flotografy_farm -p port -d dir [-m max_mem] [-n ip|-s]"; exit;;
+	esac
+	shift
+done
