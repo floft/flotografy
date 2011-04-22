@@ -50,7 +50,7 @@ server() {
 				[ ! -e "$i/files" ] && [ ! -e "$i/sent.txt" ]; then
 				cd "$i"
 				
-				if (( $(ls|wc -l)) > 0 )); then
+				if (( $(ls|wc -l) > 0 )); then
 					rm Thumbs.db &>/dev/null
 
 					sleep 2
