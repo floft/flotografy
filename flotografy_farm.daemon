@@ -1,0 +1,31 @@
+#!/bin/bash
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+lock=/var/lock/flotografy_farm.lock
+case "$1" in
+	start)
+		stat_busy "Starting floftografy_farm"
+		[ -e "$lock" ] && kill "$(cat "$lock")"
+		## Server
+		#sudo -u garrett flotografy_farm -p 42750 -d /home/garrett/HDR/ -s 5 &>/dev/null &
+		## Node
+		sudo -u garrett flotografy_farm -p 42750 -d /home/garrett/HDR/ -n 192.168.2.201 &>/dev/null
+		echo $! > "$lock"
+		stat_done
+		;;
+	stop)
+		stat_busy "Killing floftografy_farm"
+		kill "$(cat "$lock")"
+		rm "$lock"
+		stat_done
+		;;
+	restart)
+		$0 stop
+		sleep 0.5
+		$0 start
+		;;
+	*)
+		echo "usage: $0 {start|stop|restart}"  
+esac

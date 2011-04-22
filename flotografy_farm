@@ -49,30 +49,35 @@ server() {
 			if [ -n "$i" ] && [ ! -e "$i/return.txt" ] && \
 				[ ! -e "$i/files" ] && [ ! -e "$i/sent.txt" ]; then
 				cd "$i"
-				rm Thumbs.db &>/dev/null
+				
+				if (( $(ls|wc -l)) > 0 )); then
+					rm Thumbs.db &>/dev/null
 
-				sleep 2
-				#see if node wants to render
-				response=""
-				echo "want: $i" | ncat -w 1 --send-only --ssl 127.0.0.1 "$PORT"
-				sleep 0.1
-				tmp="$(mktemp --suffix=_flotografy_server)"
-				while read -r line; do
-					if grep -E "^reply: " <<<"$line" &>/dev/null && grep "$i" <<< "$line" &>/dev/null; then
-						sed -r 's/^reply: (.) .*/\1/g'<<<"$line" > "$tmp"
-						break
+					sleep 2
+					#see if node wants to render
+					response=""
+					echo "want: $i" | ncat -w 1 --send-only --ssl 127.0.0.1 "$PORT"
+					sleep 0.1
+					tmp="$(mktemp --suffix=_flotografy_server)"
+					while read -r line; do
+						if grep -E "^reply: " <<<"$line" &>/dev/null && grep "$i" <<< "$line" &>/dev/null; then
+							sed -r 's/^reply: (.) .*/\1/g'<<<"$line" > "$tmp"
+							break
+						fi
+					done < <(ncat -w 1 --ssl 127.0.0.1 "$PORT") &
+					wait_30 $! 1
+					#send or render
+					if [ "$(cat "$tmp")" == "0" ] && tar cvf take.tar *.* && echo "take: $i" | \
+					 ncat -w 1 --send-only --ssl 127.0.0.1 "$PORT"; then
+						rm "$tmp"
+						touch sent.txt
+					else
+						rm "$tmp"
+						render
 					fi
-				done < <(ncat -w 1 --ssl 127.0.0.1 "$PORT") &
-				wait_30 $! 1
-				#send or render
-				if [ "$(cat "$tmp")" == "0" ] && tar cvf take.tar *.* && echo "take: $i" | \
-				 ncat -w 1 --send-only --ssl 127.0.0.1 "$PORT"; then
-					rm "$tmp"
-					touch sent.txt
 				else
-					rm "$tmp"
-					render
-				fi
+					touch return.txt
+				done
 
 				cd "$DIR"
 			fi
@@ -85,8 +90,12 @@ node_listener() {
 		if grep -E "^want: " <<< "$line" &>/dev/null; then
 			sleep 0.3
 			folder="$(sed 's/^want: //g'<<<"$line")"
-			zenity --question --title Flotografy --text "Render $folder?" &>/dev/null &
-			wait $! && resp=0 || resp=1
+			if (( $(uptime | awk '{gsub (/,/,"",$10);print $10}') < 0.5 )); then
+				resp=0
+			else
+				zenity --question --title Flotografy --text "Render $folder?" &>/dev/null &
+				wait $! && resp=0 || resp=1
+			fi
 			echo "reply: $resp $folder" | ncat -w 2 --send-only --ssl "$1" "$PORT"
 		elif grep -E "^take: " <<< "$line" &>/dev/null; then
 			folder="$(sed 's/^take: //g'<<<"$line")"
