@@ -90,7 +90,7 @@ node_listener() {
 		if grep -E "^want: " <<< "$line" &>/dev/null; then
 			sleep 0.3
 			folder="$(sed 's/^want: //g'<<<"$line")"
-			if (( $(uptime | awk '{gsub (/,/,"",$10);print $10}') < 0.5 )); then
+			if (( $(uptime | awk '{gsub (/,/,"",$10);print $10*1000}') < 500 )); then
 				resp=0
 			else
 				zenity --question --title Flotografy --text "Render $folder?" &>/dev/null &
