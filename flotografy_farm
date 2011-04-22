@@ -124,6 +124,7 @@ node() {
 		fi
 		sleep 5
 	done < <(node_listener "$server" "$tmp")
+	node_close "$tmp"
 }
 check() {
 	[ -z "$DIR" ] && echo "Specify dir." && exit 1
