@@ -115,8 +115,7 @@ node() {
 			tar xf take.tar && \
 			rm take.tar && \
 			render && \
-			mv files/* ./ && \
-			tar cf take.tar *.* && \
+			tar cf take.tar * && \
 			cat take.tar | ssh e "cd \"$DIR/$line/\" && cat > send.tar && tar xf send.tar && rm send.tar take.tar" || \
 			echo "fail: $line" | ncat -w 1 --send-only --ssl "$server" "$PORT"
 			cd "$tmp"
