@@ -62,7 +62,7 @@ while [ "$1" != "" ]; do
 					;;
 		"--auto" | "-u")	auto="1"
 					;;
-		"--max-memory"|"-m")	shift
+		"--max-memory" | "-m")	shift
 					maxmem="-m $1"
 					;;
 		#the input files
