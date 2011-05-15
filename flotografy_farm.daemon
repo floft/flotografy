@@ -9,9 +9,9 @@ case "$1" in
 		stat_busy "Starting floftografy_farm"
 		[ -e "$lock" ] && kill "$(cat "$lock")"
 		## Server
-		#sudo -u garrett flotografy_farm -p 42750 -d /home/garrett/HDR/ -s 5 &>/dev/null &
+		sudo -u garrett flotografy_farm -p 42750 -m 550 -d /home/garrett/HDR/ -s 2 &>/dev/null &
 		## Node
-		sudo -u garrett flotografy_farm -p 42750 -d /home/garrett/HDR/ -n 192.168.2.201 &>/dev/null
+		#sudo -u garrett flotografy_farm -p 42750 -d /home/garrett/HDR/ -n 192.168.2.201 &>/dev/null
 		echo $! > "$lock"
 		stat_done
 		;;
