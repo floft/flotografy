@@ -16,9 +16,9 @@ render() {
 	#align if more than one photo
 	if [ "$(ls *.* | wc -l)" -gt "1" ]; then a="-a"; else a=""; fi
 	#max memory
-	[ -n "$MAX_MEM" ] && m="-m $MAX_MEM" || m=""
+	[ -n "$MAX_MEM" ] && m="-m" || m=""
 	#create hdr
-	flotografy $a -u -ed 2 -d files $m *.* &> return.txt
+	flotografy $a -u -ed 2 -d files $m $MAX_MEM *.* &> return.txt
 
 	touch done.txt
 }
