@@ -30,7 +30,7 @@ create() {
 			cd "$i"
 			#align if there's more than one photo
 			[ "$(ls *.* | wc -l)" -gt "1" ] && a="-a" || a=""
-			flotografy $a -ed 2 -d files *.*
+			flotografy $a $auto -ed 2 -d files *.*
 			cd "$pwd"
 			echo -e "\n\n\n"
 		done
@@ -64,11 +64,13 @@ exif() {
 	fi
 }
 
+auto=''
 while [ -n "$1" ]; do
 	case "$1" in
 		"-c") shift; create $@;;
 		"-e") shift; exif $@;;
-		"-h") echo "Usage: flotografy_dirs [-c|-e [folders]]";;
+		"-u") shift; auto="-u";;
+		"-h") echo "Usage: flotografy_dirs [-u] [-c|-e [folders]]";;
 	esac
 	shift
 done
