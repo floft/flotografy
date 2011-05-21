@@ -69,7 +69,7 @@ while [ -n "$1" ]; do
 	case "$1" in
 		"-c") shift; create $@;;
 		"-e") shift; exif $@;;
-		"-u") shift; auto="-u";;
+		"-u") auto="-u";;
 		"-h") echo "Usage: flotografy_dirs [-u] [-c|-e [folders]]";;
 	esac
 	shift
