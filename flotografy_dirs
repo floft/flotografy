@@ -56,7 +56,7 @@ exif() {
 		pwd="$(pwd)"
 		for i in $folders; do
 			cd "$i"
-			flotografy -e $(ls | grep NEF | head -n 1) *.png
+			flotografy -e $(ls | grep NEF | head -n 1) *.png -w $roundsize
 			cd "$pwd"
 		done
 	else
@@ -65,12 +65,14 @@ exif() {
 }
 
 auto=''
+roundsize=412
 while [ -n "$1" ]; do
 	case "$1" in
+		"-w") shift; roundsize="$1";;
 		"-c") shift; create $@;;
 		"-e") shift; exif $@;;
 		"-u") auto="-u";;
-		"-h") echo "Usage: flotografy_dirs [-u] [-c|-e [folders]]";;
+		"-h") echo "Usage: flotografy_dirs [-u] [-w round width] [-c|-e [folders]]";;
 	esac
 	shift
 done

@@ -25,12 +25,13 @@ maxmem=""
 #exif
 original=""
 shrinkify=""
+roundsize=412
 
 while [ "$1" != "" ]; do
 	case $1 in
 		"--help" | "-h" )	echo "Usage: (one of the following)"
 					echo "	$0 [-a] [-ex \"-2 0 2\"] [-ed 2] [-s 800x600] [-u|--auto] [-m|--max-memory 512] -d tmpdir files"
-					echo "	$0 -e original_image input_file [--noround|-nr]"
+					echo "	$0 -e original_image input_file [--noround|-nr] [--width|-w round width]"
 					echo ""
 					echo " Note: the \"-e{x,d}\" options only works with $rawtype files."
 					exit 0
@@ -55,6 +56,9 @@ while [ "$1" != "" ]; do
 					original="$1"
 					;;
 		"--noround" | "-nr")	shrinkify="1"
+					;;
+		"--width" | "-w")	shift
+					roundsize="$1"
 					;;
 		#other options
 		"--size" | "-s")	shift
@@ -275,11 +279,11 @@ elif [ "$task" == "exif" ]; then
 		else
 			width=$(identify -format '%w' $output1)
 			height=$(identify -format '%h' $output1)
-			convert -resize 824 -quality 98 $output1 $tmp
+			convert -resize $(($roundsize*2)) -quality 98 $output1 $tmp
 			twidth=$(identify -format '%w' $tmp)
 			theight=$(identify -format '%h' $tmp)
-			convert -quality 98 -size "$twidth"x"$theight"  xc:none -stroke none -draw "roundrectangle 15,15 $(echo "$twidth-7"|bc),$(echo "$theight-7"|bc) 50,50" $tmp -compose SrcIn -composite -compose over \( +clone -background black -shadow 100x6+4+4 \) +swap -background white -mosaic $tmp
-			convert -resize 412 -quality 92 $tmp $output2
+			convert -quality 100 -size "$twidth"x"$theight"  xc:none -stroke none -draw "roundrectangle 15,15 $(echo "$twidth-7"|bc),$(echo "$theight-7"|bc) 50,50" $tmp -compose SrcIn -composite -compose over \( +clone -background black -shadow 100x6+4+4 \) +swap -background white -mosaic $tmp
+			convert -resize $roundsize -quality 92 $tmp $output2
 		fi
 
 		echo "<p><a href=\"/images/blog/$output1\"><img src=\"/images/blog/$output2\" alt=\"\" /></a></p>"
