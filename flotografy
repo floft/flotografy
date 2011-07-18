@@ -237,13 +237,13 @@ if [ "$task" == "hdr" ]; then
 	
 	starty "Creating Fattal - EXR"
 	#pfsin $dir/theexr_half.exr | pfstmo_fattal02 -a 1 -b 0.9 -s 0.8 -n 0.010 --verbose | pfsout $dir/fattalexr_small.png
-	pfsin $dir/theexr_half.exr | pfstmo_fattal02 -a 1 -b 0.9 -s 0.8 -n 0.010 --verbose | pfsoutppm - | pnmtopng > $dir/fattalexr_small.png
+	pfsin $dir/theexr_half.exr | pfstmo_fattal02 -a 1 -b 0.9 -s 0.8 -n 0.010 --verbose | pfsoutppm -b 16 - | pnmtopng > $dir/fattalexr_small.png
 	convert -resize $width $dir/fattalexr_small.png $dir/fattalexr.png
 	endy
 
 	if [ "$auto" == "1" ]; then
-		convert -depth 8 $dir/theexr.png $dir/fattalexr.png -alpha on -compose dissolve -set "option:compose:args" 50,100 -gravity South -composite $dir/combined.png
-	        convert -depth 8 $dir/combined.png $dir/theexr.png -compose Overlay -composite $dir/auto.png
+		convert $dir/theexr.png $dir/fattalexr.png -alpha on -compose dissolve -set "option:compose:args" 50,100 -gravity South -composite $dir/combined.png
+	        convert $dir/combined.png $dir/theexr.png -compose Overlay -depth 8 -composite $dir/auto.png
 	fi
 	
 	#trash all the temporary files
