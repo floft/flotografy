@@ -117,7 +117,6 @@ if [ "$task" == "hdr" ]; then
 
 	function createimage() {
 		cioutput="$3"/${1//\.*/}_"$2"
-		colorprofile
 		ufraw-batch "$1" --wb=camera --linearity=0.05 --exposure="$2" --restore=lch --clip=digital --saturation=1 --wavelet-denoising-threshold=0 --base-curve=camera --curve=linear --black-point=0 --interpolation=ahd --rotate=camera --out-type=tif --out-depth=16 --exif --zip --overwrite --output=${cioutput}.raw.tif
 		if [ "$size" != "" ]; then
 			convert -resize $size $cioutput.raw.tif ${cioutput}_resize.raw.tif
