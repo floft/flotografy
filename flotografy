@@ -10,7 +10,7 @@ exiftool="/usr/bin/vendor_perl/exiftool"
 author="Garrett (Floft)"
 comment="An image from Floft.net"
 colorprofilein="/home/garrett/Downloads/Nikon/NikonD5000.icc"
-colorporfileout="/home/garrett/Downloads/Nikon/icc/ProPhoto.icc"
+colorprofileout="/home/garrett/Downloads/Nikon/icc/ProPhoto.icc"
 backgroundcolor="#F1E3FF"
 
 input=""
