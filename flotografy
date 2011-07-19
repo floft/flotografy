@@ -140,7 +140,7 @@ if [ "$task" == "hdr" ]; then
 </UFRaw>
 EOF
 
-		ufraw-batch "$1" --conf "$tmp" --wb=camera --linearity=0.05 --exposure="$2" --restore=clip --clip=digital --saturation=1 --wavelet-denoising-threshold=0 --base-curve=camera --curve=linear --black-point=0 --interpolation=ahd --rotate=camera --out-type=tif --out-depth=16 --exif --zip --overwrite --output=${cioutput}.raw.tif
+		ufraw-batch "$1" --conf "$tmp" --wb=camera --linearity=0.05 --exposure="$2" --restore=clip --clip=digital --saturation=1 --wavelet-denoising-threshold=0 --base-curve=camera --curve=linear --black-point=0 --interpolation=ahd --rotate=camera --out-type=tif --out-depth=16 --exif --zip --overwrite --create-id=no --output=${cioutput}.raw.tif
 		if [ "$size" != "" ]; then
 			convert -depth 16 -resize $size $cioutput.raw.tif ${cioutput}_resize.raw.tif
 			mv ${cioutput}_resize.raw.tif $cioutput.raw.tif
