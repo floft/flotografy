@@ -1,16 +1,20 @@
 #!/bin/bash
-
-#Public URL: http://dl.dropbox.com/u/71366/hdr-script.txt
-#Requirements: bc enblend-enfuse, imagemagick, perl-exiftool, pfstmo, pfstools, gimp-ufraw (providing ufraw-batch), and... probably more.
-#Bugs reports can be sent on: http://floft.net/contact
+#Public URL:	http://dl.dropbox.com/u/71366/hdr-script.txt
+#Requirements:	bc, enblend-enfuse, imagemagick, perl-exiftool, pfstmo, pfstools, 
+#		gimp-ufraw (providing ufraw-batch), and... probably more.
+#Bugs:		http://floft.net/contact
 
 rawtype="NEF"
-#exiftool="/usr/bin/perlbin/vendor/exiftool"
 exiftool="/usr/bin/vendor_perl/exiftool"
 author="Garrett (Floft)"
 comment="An image from Floft.net"
+
+#color profiles
+unset colorprofilein colorprofileout
 colorprofilein="/home/garrett/Downloads/Nikon/NikonD5000.icc"
-colorprofileout="/home/garrett/Downloads/Nikon/icc/ProPhoto.icc"
+#colorprofileout="/home/garrett/Downloads/Nikon/icc/ProPhoto.icc"
+
+#background color for rounded images
 backgroundcolor="#F1E3FF"
 
 input=""
@@ -119,8 +123,11 @@ if [ "$task" == "hdr" ]; then
 
 	function createimage() {
 		cioutput="$3"/${1//\.*/}_"$2"
-		local tmp="$(mktemp --suffix=_flotografy.ufraw)"
-		cat > "$tmp" <<EOF
+
+		#three options: use both in and out profiles, use in profile, use no profiles
+		if [ -n "$colorprofilein" ] && [ -n "$colorprofileout" ]; then
+			local tmp="$(mktemp --suffix=_flotografy.ufraw)"
+			cat > "$tmp" <<EOF
 <?xml version="1.0" encoding="utf-8"?>
 <UFRaw Version='7'>
 <InputFilename>$1</InputFilename>
@@ -140,13 +147,37 @@ if [ "$task" == "hdr" ]; then
 </UFRaw>
 EOF
 
-		ufraw-batch "$1" --conf "$tmp" --wb=camera --linearity=0.05 --exposure="$2" --restore=clip --clip=digital --saturation=1 --wavelet-denoising-threshold=0 --base-curve=camera --curve=linear --black-point=0 --interpolation=ahd --rotate=camera --out-type=tif --out-depth=16 --exif --zip --overwrite --create-id=no --output=${cioutput}.raw.tif
+			ufraw-batch "$1" --conf "$tmp" --wb=camera --linearity=0.05 --exposure="$2" --restore=clip --clip=digital --saturation=1 --wavelet-denoising-threshold=0 --base-curve=camera --curve=linear --black-point=0 --interpolation=ahd --rotate=camera --out-type=tif --out-depth=16 --exif --zip --overwrite --create-id=no --output=${cioutput}.raw.tif
+			rm "$tmp"
+		elif [ -n "$colorprofilein" ]; then
+			local tmp="$(mktemp --suffix=_flotografy.ufraw)"
+			cat > "$tmp" <<EOF
+<?xml version="1.0" encoding="utf-8"?>
+<UFRaw Version='7'>
+<InputFilename>$1</InputFilename>
+<OutputFilename>$cioutput</OutputFilename>
+<RestoreDetails>clip</RestoreDetails>
+<OutputType>2</OutputType>
+<CreateID>1</CreateID>
+<LosslessCompression>1</LosslessCompression>
+<InputProfile Current='yes'>NikonD5000
+        <File>$colorprofilein</File>
+        <Linearity>0.050000</Linearity>
+</InputProfile>
+</UFRaw>
+EOF
+
+			ufraw-batch "$1" --conf "$tmp" --wb=camera --linearity=0.05 --exposure="$2" --restore=clip --clip=digital --saturation=1 --wavelet-denoising-threshold=0 --base-curve=camera --curve=linear --black-point=0 --interpolation=ahd --rotate=camera --out-type=tif --out-depth=16 --exif --zip --overwrite --create-id=no --output=${cioutput}.raw.tif
+			rm "$tmp"
+		else
+			ufraw-batch "$1" --wb=camera --linearity=0.05 --exposure="$2" --restore=clip --clip=digital --saturation=1 --wavelet-denoising-threshold=0 --base-curve=camera --curve=linear --black-point=0 --interpolation=ahd --rotate=camera --out-type=tif --out-depth=16 --exif --zip --overwrite --create-id=no --output=${cioutput}.raw.tif
+		fi
+
 		if [ "$size" != "" ]; then
 			convert -depth 16 -resize $size $cioutput.raw.tif ${cioutput}_resize.raw.tif
 			mv ${cioutput}_resize.raw.tif $cioutput.raw.tif
 		fi
 
-		rm "$tmp"
 	}
 
 	#get the input files
