@@ -7,8 +7,10 @@
 rawtype="NEF"
 #exiftool="/usr/bin/perlbin/vendor/exiftool"
 exiftool="/usr/bin/vendor_perl/exiftool"
+author="Garrett (Floft)"
 comment="An image from Floft.net"
-colorprofile="/home/garrett/Downloads/Nikon/NikonD5000.icc"
+colorprofilein="/home/garrett/Downloads/Nikon/NikonD5000.icc"
+colorporfileout="/home/garrett/Downloads/Nikon/icc/ProPhoto.icc"
 backgroundcolor="#F1E3FF"
 
 input=""
@@ -117,11 +119,34 @@ if [ "$task" == "hdr" ]; then
 
 	function createimage() {
 		cioutput="$3"/${1//\.*/}_"$2"
-		ufraw-batch "$1" --wb=camera --linearity=0.05 --exposure="$2" --restore=lch --clip=digital --saturation=1 --wavelet-denoising-threshold=0 --base-curve=camera --curve=linear --black-point=0 --interpolation=ahd --rotate=camera --out-type=tif --out-depth=16 --exif --zip --overwrite --output=${cioutput}.raw.tif
+		local tmp="$(mktemp --suffix=_flotografy.ufraw)"
+		cat > "$tmp" <<EOF
+<?xml version="1.0" encoding="utf-8"?>
+<UFRaw Version='7'>
+<InputFilename>$1</InputFilename>
+<OutputFilename>$cioutput</OutputFilename>
+<RestoreDetails>clip</RestoreDetails>
+<OutputType>2</OutputType>
+<CreateID>1</CreateID>
+<LosslessCompression>1</LosslessCompression>
+<InputProfile Current='yes'>NikonD5000
+        <File>$colorprofilein</File>
+        <Linearity>0.050000</Linearity>
+</InputProfile>
+<OutputProfile Current='yes'>ProPhoto
+        <File>$colorprofileout</File>
+        <BitDepth>16</BitDepth>
+</OutputProfile>
+</UFRaw>
+EOF
+
+		ufraw-batch "$1" --conf "$tmp" --wb=camera --linearity=0.05 --exposure="$2" --restore=clip --clip=digital --saturation=1 --wavelet-denoising-threshold=0 --base-curve=camera --curve=linear --black-point=0 --interpolation=ahd --rotate=camera --out-type=tif --out-depth=16 --exif --zip --overwrite --output=${cioutput}.raw.tif
 		if [ "$size" != "" ]; then
-			convert -resize $size $cioutput.raw.tif ${cioutput}_resize.raw.tif
+			convert -depth 16 -resize $size $cioutput.raw.tif ${cioutput}_resize.raw.tif
 			mv ${cioutput}_resize.raw.tif $cioutput.raw.tif
 		fi
+
+		rm "$tmp"
 	}
 
 	#get the input files
@@ -239,12 +264,12 @@ if [ "$task" == "hdr" ]; then
 	starty "Creating Fattal - EXR"
 	#pfsin $dir/theexr_half.exr | pfstmo_fattal02 -a 1 -b 0.9 -s 0.8 -n 0.010 --verbose | pfsout $dir/fattalexr_small.png
 	pfsin $dir/theexr_half.exr | pfstmo_fattal02 -a 1 -b 0.9 -s 0.8 -n 0.010 --verbose | pfsoutppm -b 16 - | pnmtopng > $dir/fattalexr_small.png
-	convert -resize $width $dir/fattalexr_small.png $dir/fattalexr.png
+	convert -depth 16 -resize $width $dir/fattalexr_small.png $dir/fattalexr.png
 	endy
 
 	if [ "$auto" == "1" ]; then
-		convert $dir/theexr.png $dir/fattalexr.png -alpha on -compose dissolve -set "option:compose:args" 50,100 -gravity South -composite $dir/combined.png
-	        convert $dir/combined.png $dir/theexr.png -compose Overlay -depth 8 -composite $dir/auto.png
+		convert -depth 16 $dir/theexr.png $dir/fattalexr.png -alpha on -compose dissolve -set "option:compose:args" 50,100 -gravity South -composite $dir/combined.png
+	        convert -depth 16 $dir/combined.png $dir/theexr.png -compose Overlay -composite $dir/auto.png
 	fi
 	
 	#trash all the temporary files
@@ -274,7 +299,9 @@ elif [ "$task" == "exif" ]; then
 		tmp="/tmp/tmpout_$rand.jpg"
 		tmp2="/tmp/tmpout2_$rand.jpg"
 
-		convert -quality 98 $input $output1; convert -quality 85 -resize 150 $output1 $tmp; $exiftool -TagsFromFile $original -all:all -overwrite_original_in_place -author=$(whoami) -Orientation='Horizontal (normal)' -comment="$comment" "-ThumbnailImage<=$tmp" $output1
+		convert -quality 100 $input $output1
+		convert -quality 85 -resize 150 $output1 $tmp
+		$exiftool -TagsFromFile $original -all:all -overwrite_original_in_place -author="$author" -Orientation='Horizontal (normal)' -comment="$comment" "-ThumbnailImage<=$tmp" $output1
 
 	
 		if [ "$shrinkify" == "1" ]; then
