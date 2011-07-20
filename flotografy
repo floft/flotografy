@@ -330,8 +330,8 @@ elif [ "$task" == "exif" ]; then
 		tmp="/tmp/tmpout_$rand.jpg"
 		tmp2="/tmp/tmpout2_$rand.jpg"
 
-		convert -quality 100 $input $output1
-		convert -quality 85 -resize 150 $output1 $tmp
+		convert -quality 98 $input $output1
+		convert -filter lanczos -quality 85 -resize 150 $output1 $tmp
 		$exiftool -TagsFromFile $original -all:all -overwrite_original_in_place -author="$author" -Orientation='Horizontal (normal)' -comment="$comment" "-ThumbnailImage<=$tmp" $output1
 
 	
@@ -341,13 +341,13 @@ elif [ "$task" == "exif" ]; then
 		else
 			width=$(identify -format '%w' $output1)
 			height=$(identify -format '%h' $output1)
-			convert -resize $(($roundsize*2)) -quality 100 $output1 $tmp
+			convert -filter lanczos -resize $(($roundsize*2)) -quality 100 $output1 $tmp
 			twidth=$(identify -format '%w' $tmp)
 			theight=$(identify -format '%h' $tmp)
 			convert -quality 100 -size "$twidth"x"$theight"  xc:none -stroke none -draw "roundrectangle 15,15 $(echo "$twidth-7"|bc),$(echo "$theight-7"|bc) 50,50" $tmp -compose SrcIn -composite -compose over \( +clone -background black -shadow 100x6+4+4 \) +swap -background white -mosaic $tmp2
-			convert -resize $roundsize -quality 92 $tmp2 $output2white
+			convert -filter lanczos -resize $roundsize -quality 92 $tmp2 $output2white
 			convert -quality 100 -size "$twidth"x"$theight"  xc:none -stroke none -draw "roundrectangle 15,15 $(echo "$twidth-7"|bc),$(echo "$theight-7"|bc) 50,50" $tmp -compose SrcIn -composite -compose over \( +clone -background black -shadow 100x6+4+4 \) +swap -background "$backgroundcolor" -mosaic $tmp2
-			convert -resize $roundsize -quality 92 $tmp2 $output2
+			convert -filter lanczos -resize $roundsize -quality 92 $tmp2 $output2
 
 			"$exiftool" -all= -overwrite_original_in_place "$output2"
 			"$exiftool" -all= -overwrite_original_in_place "$output2white"
