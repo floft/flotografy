@@ -7,7 +7,7 @@ arch=('any')
 url="http://floft.net/wiki/Scripts/Flotografy"
 license=('GPL')
 #Depends: nmap is for flotografy_farm
-depends=('bc' 'enblend-enfuse' 'imagemagick' 'perl-exiftool' 'pfstmo' 'pfstools' 'gimp-ufraw' 'nmap')
+depends=('bc' 'enblend-enfuse' 'imagemagick' 'perl-exiftool' 'pfstmo' 'pfstools' 'gimp-ufraw' 'nmap' 'hugin')
 backup=('etc/rc.d/flotografy_farm')
 makedepends=('curl')
 
