@@ -8,3 +8,4 @@ Depends:
 	pfstmo
 	pfstools
 	gimp-ufraw (provides ufraw-batch)
+	hugin (provides align_image_stack)
