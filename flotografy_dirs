@@ -34,7 +34,7 @@ create() {
 			[ "$num" -gt "1" ] && a="-a"
 			#extend if there are three or less
 			[ "$num" -le "3" ] && e="-ed 2"
-			flotografy $o $e $auto -d files *.*
+			flotografy $o $e $a -d files *.*
 			cd "$pwd"
 			echo -e "\n\n\n"
 		done
@@ -68,7 +68,6 @@ exif() {
 	fi
 }
 
-unset auto
 roundsize=412
 while [ -n "$1" ]; do
 	case "$1" in
