@@ -5,7 +5,7 @@ pkgrel=1
 pkgdesc="A simple script to generate some tone-mapped images using pfstmo."
 arch=('any')
 url="http://floft.net/wiki/Scripts/Flotografy"
-license=('GPL')
+license=('ISC')
 #Depends: nmap is for flotografy_farm
 depends=('bc' 'enblend-enfuse' 'imagemagick' 'perl-exiftool' 'pfstmo' 'pfstools' 'gimp-ufraw' 'nmap' 'hugin')
 backup=('etc/rc.d/flotografy_farm')
