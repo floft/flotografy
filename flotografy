@@ -1,6 +1,6 @@
 #!/bin/bash
 #Public URL:	http://dl.dropbox.com/u/71366/hdr-script.txt
-#Requirements:	bc, enblend-enfuse, imagemagick, perl-exiftool, pfstmo, pfstools, 
+#Requirements:	bc, enblend-enfuse, imagemagick, perl-image-exiftool, pfstmo, pfstools, 
 #		gimp-ufraw (provides ufraw-batch), hugin (provides align_image_stack)
 #Bugs:		http://floft.net/contact
 
