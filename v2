@@ -1,0 +1,45 @@
+#!/bin/bash
+##
+## Usage:
+##   v2 [-a] *.tif
+## 
+
+aligned_prefix="aligned_"
+enfuse_png="enfuse.png"
+enfuse_exr="enfuse.exr"
+fattal="fattal.png"
+fattal_small="fattal_small.png"
+
+f_align() {
+	align_image_stack "$@" -m -c 8 -a "$aligned_prefix"
+}
+
+f_enfuse() {
+	enfuse "$@" -o "$enfuse_png"
+	enfuse "$@" -o "$enfuse_exr"
+}
+
+f_fattal() {
+	local full="$1"
+	local half="${full//.exr/_half.exr}"
+	local width=$(identify -format '%w' "$1")
+	
+	convert -filter lanczos -resize "50%" "$full" "$half"
+
+	pfsin "$half" | pfstmo_fattal02 -a 1 -b 0.9 -s 0.8 -n 0.010 | pfsoutppm -b 16 - | pnmtopng > "$fattal_small"
+	convert -filter lanczos -depth 16 -resize "$width" "$fattal_small" "$fattal"
+
+	rm "$fattal_small" "$half"
+}
+
+if [[ $1 == "-a" ]]; then
+	shift
+
+	f_align "$@"
+	f_enfuse "${aligned_prefix}"*.tif
+else
+	f_enfuse "$@"
+fi
+
+f_fattal "$enfuse_exr"
+rm "$enfuse_exr"
