@@ -322,10 +322,10 @@ elif [ "$task" == "exif" ]; then
 		pwd=$(pwd)
 		prefix="$(date +%Y%m%d)_${pwd//\/*\//}"
 		output1="$prefix.jpg"
-		output2=$prefix"_round.jpg"
-		output2white=$prefix"_round.white.jpg"
+		output2=$prefix"_thumb.jpg"
+		#output2white=$prefix"_round.white.jpg"
 		echo "Output final: $output1"
-		echo "Output round: $output2"
+		echo "Output small: $output2"
 		rand="$RANDOM$RANDOM$RANDOM$RANDOM$RANDOM$RANDOM$$"
 		tmp="/tmp/tmpout_$rand.jpg"
 		tmp2="/tmp/tmpout2_$rand.jpg"
@@ -339,18 +339,18 @@ elif [ "$task" == "exif" ]; then
 			echo ""
 			echo "Please use the /home/floft/www/images/shrinkify.sh script."
 		else
-			width=$(identify -format '%w' $output1)
-			height=$(identify -format '%h' $output1)
-			convert -filter lanczos -resize $(($roundsize*2)) -quality 100 $output1 $tmp
-			twidth=$(identify -format '%w' $tmp)
-			theight=$(identify -format '%h' $tmp)
-			convert -quality 100 -size "$twidth"x"$theight"  xc:none -stroke none -draw "roundrectangle 15,15 $(echo "$twidth-7"|bc),$(echo "$theight-7"|bc) 50,50" $tmp -compose SrcIn -composite -compose over \( +clone -background black -shadow 100x6+4+4 \) +swap -background white -mosaic $tmp2
-			convert -filter lanczos -resize $roundsize -quality 92 $tmp2 $output2white
-			convert -quality 100 -size "$twidth"x"$theight"  xc:none -stroke none -draw "roundrectangle 15,15 $(echo "$twidth-7"|bc),$(echo "$theight-7"|bc) 50,50" $tmp -compose SrcIn -composite -compose over \( +clone -background black -shadow 100x6+4+4 \) +swap -background "$backgroundcolor" -mosaic $tmp2
-			convert -filter lanczos -resize $roundsize -quality 92 $tmp2 $output2
+			#width=$(identify -format '%w' $output1)
+			#height=$(identify -format '%h' $output1)
+			#convert -filter lanczos -resize $(($roundsize*2)) -quality 100 $output1 $tmp
+			#twidth=$(identify -format '%w' $tmp)
+			#theight=$(identify -format '%h' $tmp)
+			#convert -quality 100 -size "$twidth"x"$theight"  xc:none -stroke none -draw "roundrectangle 15,15 $(echo "$twidth-7"|bc),$(echo "$theight-7"|bc) 50,50" $tmp -compose SrcIn -composite -compose over \( +clone -background black -shadow 100x6+4+4 \) +swap -background white -mosaic $tmp2
+			#convert -filter lanczos -resize $roundsize -quality 92 $tmp2 $output2white
+			#convert -quality 100 -size "$twidth"x"$theight"  xc:none -stroke none -draw "roundrectangle 15,15 $(echo "$twidth-7"|bc),$(echo "$theight-7"|bc) 50,50" $tmp -compose SrcIn -composite -compose over \( +clone -background black -shadow 100x6+4+4 \) +swap -background "$backgroundcolor" -mosaic $tmp2
+			convert -filter lanczos -resize $roundsize -quality 92 $input $output2
 
 			"$exiftool" -all= -overwrite_original_in_place "$output2"
-			"$exiftool" -all= -overwrite_original_in_place "$output2white"
+			#"$exiftool" -all= -overwrite_original_in_place "$output2white"
 		fi
 
 		echo "<p><a href=\"/images/blog/$output1\"><img src=\"/images/blog/$output2\" alt=\"\" /></a></p>"
