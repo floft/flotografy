@@ -1,7 +1,8 @@
 #!/bin/bash
 ##
 ## Usage:
-##   v2 [-a] *.tif
+##   v2 [-a] *.tif    #[align and] convert tif
+##   v2 -r            #convert raw files
 ## 
 
 aligned_prefix="aligned_"
@@ -10,6 +11,10 @@ enfuse_exr="enfuse.exr"
 fattal="fattal.png"
 fattal_small="fattal_small.png"
 cache="5120" #MB
+raw_ext="NEF"
+
+# reduce needless pain
+[[ -z $1 ]] && echo -e "hdr -r # convert raw files\nhdr [-a] *.tif" && exit 0
 
 f_align() {
 	align_image_stack "$@" -m -c 8 -a "$aligned_prefix"
@@ -28,21 +33,32 @@ f_fattal() {
 	enfuse "$@" -m "$cache" -o "$enfuse_exr"
 	convert -filter lanczos -resize "50%" "$enfuse_exr" "$half"
 
-	pfsin "$half" | pfstmo_fattal02 -a 1 -b 0.9 -s 0.8 -n 0.010 | pfsoutppm -b 16 - | pnmtopng > "$fattal_small"
+	pfsin "$half" | pfstmo_fattal02 -m -a 1 -b 0.9 -s 0.8 -n 0.010 | pfsoutppm -b 16 - | pnmtopng > "$fattal_small"
 	convert -filter lanczos -depth 16 -resize "$width" "$fattal_small" "$fattal"
 
-	rm "$enfuse_exr" "$fattal_small" "$half"
+	#rm "$enfuse_exr" "$fattal_small" "$half"
 	trap - 2 15
+}
+
+f_raw() {
+	for i in *."$raw_ext"; do
+		ufraw-batch --conf "$(ls *.ufraw | head -n 1)" $i &
+	done
+	wait
 }
 
 if [[ $1 == "-a" ]]; then
 	shift
-
 	f_align "$@"
 	f_enfuse "${aligned_prefix}"*.tif &
+	f_fattal "${aligned_prefix}"*.tif &
+elif [[ $1 == "-r" ]]; then
+	f_raw
+	#f_enfuse *.tif &
+	#f_fattal *.tif &
 else
 	f_enfuse "$@" &
+	f_fattal "$@" &
 fi
 
-f_fattal "$@" &
 wait
